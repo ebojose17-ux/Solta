@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>solta — baixe vídeos do TikTok sem marca d'água</title>
+<style>
+  :root {
+    --roxo: #1a0e2e;
+    --roxo-claro: #2d1b4e;
+    --rosa: #ff2e88;
+    --lima: #c6ff3d;
+    --texto: #f2ebff;
+    --texto-fraco: #a996c9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: radial-gradient(circle at 20% -10%, #3a1a5c 0%, var(--roxo) 55%);
+    color: var(--texto);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 60px;
+  }
+  header { text-align: center; margin: 32px 0 28px; }
+  .logo { font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; }
+  .logo span { color: var(--lima); }
+  header p { color: var(--texto-fraco); margin-top: 8px; font-size: 0.95rem; }
+  .card {
+    width: 100%; max-width: 480px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 22px;
+    backdrop-filter: blur(6px);
+  }
+  .campo { display: flex; gap: 8px; }
+  input[type="text"] {
+    flex: 1; background: var(--roxo-claro);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 14px 16px;
+    color: var(--texto); font-size: 1rem; outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--rosa); }
+  input[type="text"]::placeholder { color: var(--texto-fraco); }
+  button.principal {
+    background: linear-gradient(135deg, var(--rosa), #a02bff);
+    border: none; color: white; font-weight: 700; font-size: 1rem;
+    border-radius: 14px; padding: 16px; width: 100%; margin-top: 14px;
+    cursor: pointer; transition: transform .15s ease, opacity .15s ease;
+  }
+  button.principal:hover { transform: translateY(-1px); }
+  button.principal:disabled { opacity: 0.6; cursor: not-allowed; }
+  .status { margin-top: 16px; font-size: 0.9rem; color: var(--texto-fraco); text-align: center; min-height: 20px; }
+  .status.erro { color: #ff6b6b; }
+  .resultado { margin-top: 20px; display: none; }
+  .resultado.ativo { display: block; }
+  .capa-wrap { position: relative; border-radius: 16px; overflow: hidden; aspect-ratio: 9/16; max-height: 380px; background: #000; }
+  .capa-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .info { margin-top: 12px; }
+  .info h3 { font-size: 1rem; line-height: 1.4; }
+  .info p { color: var(--texto-fraco); font-size: 0.85rem; margin-top: 4px; }
+  .botoes { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  a.baixar { text-decoration: none; text-align: center; padding: 14px; border-radius: 12px; font-weight: 700; font-size: 0.95rem; }
+  a.baixar.sem-marca { background: var(--lima); color: #14260a; }
+  a.baixar.hd { background: transparent; border: 1px solid var(--lima); color: var(--lima); }
+  footer { margin-top: 40px; color: var(--texto-fraco); font-size: 0.75rem; text-align: center; }
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: var(--rosa); border-radius: 50%;
+    animation: girar 0.7s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">sol<span>ta</span></div>
+  <p>Cole o link do TikTok e baixe o vídeo sem marca d'água</p>
+</header>
+
+<div class="card">
+  <div class="campo">
+    <input type="text" id="link" placeholder="https://www.tiktok.com/@usuario/video/..." autocomplete="off">
+  </div>
+  <button class="principal" id="btnBaixar">Soltar vídeo</button>
+  <div class="status" id="status"></div>
+
+  <div class="resultado" id="resultado">
+    <div class="capa-wrap">
+      <img id="capa" src="" alt="Capa do vídeo">
+    </div>
+    <div class="info">
+      <h3 id="titulo"></h3>
+      <p id="autor"></p>
+    </div>
+    <div class="botoes">
+      <a class="baixar sem-marca" id="linkSemMarca" href="#" download target="_blank">⬇ Baixar sem marca d'água</a>
+      <a class="baixar hd" id="linkHD" href="#" download target="_blank" style="display:none;">⬇ Baixar em HD</a>
+    </div>
+  </div>
+</div>
+
+<footer>solta • não hospeda nenhum conteúdo, apenas processa o link informado</footer>
+
+<script>
+const campoLink = document.getElementById('link');
+const btn = document.getElementById('btnBaixar');
+const status = document.getElementById('status');
+const resultado = document.getElementById('resultado');
+
+async function baixar() {
+  const url = campoLink.value.trim();
+  status.className = 'status';
+  resultado.classList.remove('ativo');
+
+  if (!url) {
+    status.textContent = 'Cole um link do TikTok primeiro.';
+    status.className = 'status erro';
+    return;
+  }
+
+  btn.disabled = true;
+  status.innerHTML = '<span class="spinner"></span> Processando vídeo...';
+
+  try {
+    const resp = await fetch('/api/download', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const dados = await resp.json();
+
+    if (!resp.ok || dados.erro) {
+      throw new Error(dados.erro || 'Erro ao processar o vídeo.');
+    }
+
+    document.getElementById('capa').src = dados.capa;
+    document.getElementById('titulo').textContent = dados.titulo;
+    document.getElementById('autor').textContent = '@' + dados.autor;
+
+    const linkSemMarca = document.getElementById('linkSemMarca');
+    linkSemMarca.href = dados.video_sem_marca;
+
+    const linkHD = document.getElementById('linkHD');
+    if (dados.video_hd) {
+      linkHD.href = dados.video_hd;
+      linkHD.style.display = 'block';
+    } else {
+      linkHD.style.display = 'none';
+    }
+
+    resultado.classList.add('ativo');
+    status.textContent = '';
+  } catch (e) {
+    status.textContent = e.message || 'Não foi possível baixar esse vídeo.';
+    status.className = 'status erro';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+btn.addEventListener('click', baixar);
+campoLink.addEventListener('keydown', (e) => { if (e.key === 'Enter') baixar(); });
+</script>
+
+</body>
+        </html>
