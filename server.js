@@ -10,7 +10,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Extrai um link de TikTok (incluindo links curtos vm.tiktok.com) de um texto
 function extrairLinkTikTok(texto) {
   const regex = /(https?:\/\/(?:www\.|vm\.|vt\.|m\.)?tiktok\.com\/\S+)/i;
   const match = texto.match(regex);
@@ -30,11 +29,32 @@ app.post('/api/download', async (req, res) => {
       return res.status(400).json({ erro: 'Não encontrei um link do TikTok nesse texto.' });
     }
 
-    // tikwm.com API pública - retorna vídeo sem marca d'água
-    const resposta = await axios.get('https://www.tikwm.com/api/', {
-      params: { url: link, hd: 1 },
-      timeout: 15000,
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+    const resposta = await axios.post(
+      'https://www.tikwm.com/api/',
+      new URLSearchParams({ url: link, hd: '1' }).toString(),
+      {
+        timeout: 15000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Referer': 'https://www.tikwm.com/',
+          'Accept': 'application/json, text/plain, */*'
+        }
+      }
+    );
+
+    const dados = resposta.data;
+
+    if (!dados || dados.code !== 0 || !dados.data) {
+      return res.status(502).json({ erro: 'Não consegui processar esse vídeo. Verifique o link ou tente novamente.' });
+    }
+
+    const v = dados.data;
+
+    res.json({
+      sucesso: true,
+      titulo: v.title || 'Vídeo do TikTok',
+      autor: v.author?.nickname || v.author?.unique_id || '      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
     const dados = resposta.data;
