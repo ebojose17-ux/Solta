@@ -38,7 +38,16 @@ app.post('/api/download', async (req, res) => {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
           'Content-Type': 'application/x-www-form-urlencoded',
           'Referer': 'https://www.tikwm.com/',
-          'Accept': 'application/json, text/plain, */*'
+          'Origin': 'https://www.tikwm.com',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+          'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Windows"',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-origin',
+          'X-Requested-With': 'XMLHttpRequest'
         }
       }
     );
