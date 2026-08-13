@@ -54,20 +54,6 @@ app.post('/api/download', async (req, res) => {
     res.json({
       sucesso: true,
       titulo: v.title || 'Vídeo do TikTok',
-      autor: v.author?.nickname || v.author?.unique_id || '      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-
-    const dados = resposta.data;
-
-    if (!dados || dados.code !== 0 || !dados.data) {
-      return res.status(502).json({ erro: 'Não consegui processar esse vídeo. Verifique o link ou tente novamente.' });
-    }
-
-    const v = dados.data;
-
-    res.json({
-      sucesso: true,
-      titulo: v.title || 'Vídeo do TikTok',
       autor: v.author?.nickname || v.author?.unique_id || 'Desconhecido',
       capa: v.cover || v.origin_cover || '',
       duracao: v.duration || null,
