@@ -141,10 +141,8 @@ async function baixar() {
   status.innerHTML = '<span class="spinner"></span> Processando vídeo...';
 
   try {
-    // A busca agora acontece direto no navegador da pessoa (não no servidor),
-    // usando um proxy CORS gratuito, para que a tikwm veja um IP residencial normal.
     const apiTikwm = 'https://www.tikwm.com/api/?url=' + encodeURIComponent(link) + '&hd=1';
-    const urlComProxy = 'https://corsproxy.io/?' + encodeURIComponent(apiTikwm);
+    const urlComProxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(apiTikwm);
 
     const resp = await fetch(urlComProxy);
     if (!resp.ok) {
