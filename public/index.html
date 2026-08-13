@@ -113,13 +113,26 @@ const btn = document.getElementById('btnBaixar');
 const status = document.getElementById('status');
 const resultado = document.getElementById('resultado');
 
+function extrairLinkTikTok(texto) {
+  const regex = /(https?:\/\/(?:www\.|vm\.|vt\.|m\.)?tiktok\.com\/\S+)/i;
+  const match = texto.match(regex);
+  return match ? match[0] : null;
+}
+
 async function baixar() {
-  const url = campoLink.value.trim();
+  const textoDigitado = campoLink.value.trim();
   status.className = 'status';
   resultado.classList.remove('ativo');
 
-  if (!url) {
+  if (!textoDigitado) {
     status.textContent = 'Cole um link do TikTok primeiro.';
+    status.className = 'status erro';
+    return;
+  }
+
+  const link = extrairLinkTikTok(textoDigitado);
+  if (!link) {
+    status.textContent = 'Não encontrei um link do TikTok nesse texto.';
     status.className = 'status erro';
     return;
   }
@@ -128,27 +141,40 @@ async function baixar() {
   status.innerHTML = '<span class="spinner"></span> Processando vídeo...';
 
   try {
-    const resp = await fetch('/api/download', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
-    });
+    // A busca agora acontece direto no navegador da pessoa (não no servidor),
+    // usando um proxy CORS gratuito, para que a tikwm veja um IP residencial normal.
+    const apiTikwm = 'https://www.tikwm.com/api/?url=' + encodeURIComponent(link) + '&hd=1';
+    const urlComProxy = 'https://corsproxy.io/?' + encodeURIComponent(apiTikwm);
+
+    const resp = await fetch(urlComProxy);
+    if (!resp.ok) {
+      throw new Error('Não foi possível conectar ao serviço de download.');
+    }
     const dados = await resp.json();
 
-    if (!resp.ok || dados.erro) {
-      throw new Error(dados.erro || 'Erro ao processar o vídeo.');
+    if (!dados || dados.code !== 0 || !dados.data) {
+      throw new Error('Não consegui processar esse vídeo. Verifique o link ou tente novamente.');
     }
 
-    document.getElementById('capa').src = dados.capa;
-    document.getElementById('titulo').textContent = dados.titulo;
-    document.getElementById('autor').textContent = '@' + dados.autor;
+    const v = dados.data;
+
+    document.getElementById('capa').src = v.cover || v.origin_cover || '';
+    document.getElementById('titulo').textContent = v.title || 'Vídeo do TikTok';
+    document.getElementById('autor').textContent = '@' + (v.author?.nickname || v.author?.unique_id || 'desconhecido');
+
+    const videoSemMarca = v.play
+      ? (v.play.startsWith('http') ? v.play : `https://www.tikwm.com${v.play}`)
+      : null;
+    const videoHD = v.hdplay
+      ? (v.hdplay.startsWith('http') ? v.hdplay : `https://www.tikwm.com${v.hdplay}`)
+      : null;
 
     const linkSemMarca = document.getElementById('linkSemMarca');
-    linkSemMarca.href = dados.video_sem_marca;
+    linkSemMarca.href = videoSemMarca || '#';
 
     const linkHD = document.getElementById('linkHD');
-    if (dados.video_hd) {
-      linkHD.href = dados.video_hd;
+    if (videoHD) {
+      linkHD.href = videoHD;
       linkHD.style.display = 'block';
     } else {
       linkHD.style.display = 'none';
@@ -169,4 +195,4 @@ campoLink.addEventListener('keydown', (e) => { if (e.key === 'Enter') baixar(); 
 </script>
 
 </body>
-        </html>
+</html>
